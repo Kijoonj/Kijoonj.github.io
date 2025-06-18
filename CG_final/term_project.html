@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Where is my Airpod</title>
+    <!-- CDN을 사용한 Three.js importmap 설정 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 200;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 150;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            display: none;  /* 초기에 숨김 */
+        }
+        
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 160;
+            display: none;  /* 초기에 숨김 */
+        }
+        
+        #successMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.6;
+            max-width: 600px;
+            z-index: 300;
+            display: none;  /* 초기에 숨김 */
+            border: 3px solid #4CAF50;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.5);
+        }
+        
+        #successMessage .main-text {
+            font-size: 32px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        
+        #successMessage .sub-text {
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        #successMessage .happy-text {
+            font-size: 28px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(255, 215, 0, 0.8);
+        }
+        
+        #failMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.6;
+            max-width: 600px;
+            z-index: 300;
+            display: none;  /* 초기에 숨김 */
+            border: 3px solid #F44336;
+            box-shadow: 0 0 30px rgba(244, 67, 54, 0.5);
+        }
+        
+        #failMessage .main-text {
+            font-size: 32px;
+            color: #F44336;
+            margin-bottom: 20px;
+        }
+        
+        #failMessage .sub-text {
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        #failMessage .sad-text {
+            font-size: 28px;
+            color: #9E9E9E;
+            text-shadow: 2px 2px 4px rgba(158, 158, 158, 0.8);
+        }
+        
+        #introMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.8;
+            max-width: 700px;
+            z-index: 250;
+            display: none;  /* 초기에 숨김 */
+            border: 3px solid #2196F3;
+            box-shadow: 0 0 40px rgba(33, 150, 243, 0.6);
+        }
+        
+        #introMessage .title-text {
+            font-size: 42px;
+            color: #2196F3;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(33, 150, 243, 0.8);
+        }
+        
+        #introMessage .time-text {
+            font-size: 26px;
+            color: #FF9800;
+            margin-bottom: 20px;
+        }
+        
+        #introMessage .question-text {
+            font-size: 22px;
+            margin-bottom: 30px;
+        }
+        
+        #introMessage .start-text {
+            font-size: 28px;
+            color: #4CAF50;
+            animation: blink 1.5s infinite;
+            cursor: pointer;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div id="instructions">
+        <strong>FPS 컨트롤:</strong><br>
+        화면 클릭: 마우스 락 활성화<br>
+        마우스: 시점 회전 (락 상태에서)<br>
+        W/A/S/D: 이동<br>
+        C: 앉기 (누르고 있기)<br>
+        클릭: 에어팟 선택 (락 상태에서)<br>
+        ESC: 마우스 락 해제
+    </div>
+    
+    <div id="loading">Loading...</div>
+    
+    <div id="introMessage">
+        <div class="title-text">에어팟을 찾아라!</div>
+        <div class="time-text">외출까지 남은 시간 1분...</div>
+        <div class="question-text">당신은 에어팟과 함께 외출할 수 있습니까?</div>
+        <div class="start-text">Click to Start</div>
+    </div>
+    
+    <div id="crosshair">+</div>
+    
+    <div id="timer">1:00</div>
+    
+    <div id="successMessage">
+        <div class="main-text">에어팟을 찾았습니다!</div>
+        <div class="sub-text">당신은 에어팟과 함께 외출할 수 있게 되었습니다.</div>
+        <div class="happy-text">You are HAPPY</div>
+    </div>
+    
+    <div id="failMessage">
+        <div class="main-text">에어팟을 찾지 못했습니다.</div>
+        <div class="sub-text">당신은 에어팟 없이 외출하게 되었습니다.</div>
+        <div class="sad-text">You are NOT HAPPY...</div>
+    </div>
+    
+    <script type="module" src="term_project.js"></script>
+</body>
+</html>
